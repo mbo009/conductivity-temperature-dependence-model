@@ -218,11 +218,11 @@ export default {
     addCarriers() {
       let carrierCount = (this.windowHeight * this.windowWidth) * this.carrierConcentration / 37500;
       for (let i = 0; i < carrierCount; i++) {
-        this.addCarrier();
+        this.createCarrier();
       }
     },
 
-    addCarrier() {
+    createCarrier() {
       let carrier = Matter.Bodies.circle(
         45,
         Math.random() * this.windowHeight,
@@ -247,10 +247,23 @@ export default {
     },
     
     updateCarriers(){
-
+      let carrierCount = this.carrierCount();
+      if (this.carriers.length > carrierCount) {
+        this.carriers.slice(0, this.carriers.length - carrierCount).forEach(carrier => {
+          Matter.Composite.remove(this.engine.world, carrier);
+        });
+        this.carriers = this.carriers.slice(this.carriers.length - carrierCount, this.carriers.length);
+      } else {
+        for (let i = this.carriers.length; i < carrierCount; i++) {
+          this.createCarrier();
+        }
+      }
     },
 
-
+    carrierCount() {
+      return (this.windowHeight * this.windowWidth) * this.carrierConcentration / 37500;
+    },
+    
     resetSimulation() {
       Matter.Composite.clear(this.engine.world, this.atoms);
       this.addAtoms();
@@ -273,7 +286,7 @@ export default {
       immediate: true,
       handler() {
         if (this.engine) {
-          this.resetSimulation();
+          this.updateCarriers();
         }
       } 
     }
