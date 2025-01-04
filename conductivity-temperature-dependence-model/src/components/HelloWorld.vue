@@ -21,87 +21,76 @@
         :max="atomSizeMax"
         label="Rozmiar atomów"
       />
-
-      <v-select
-        :items="materialNames"
-        v-model="selectedMaterial"
-        label="Wybierz materiał"
-        @change="updateTemperature"
-      ></v-select>
     </v-row>
-    <p style="text-align: center">Prędkość dryfu:</p>
-    <PhysicsModel
-      :temperature="temperature"
-      :carrierConcentration="carrierConcentration"
-      :atomSize="atomSize"
-      :debeyeTemperature="debeyeTemperature"
-    />
+    <v-row>
+      <button style="font-size: 100" @click="toggleElectricField">⚡️</button>
+      <p style="width: 200px; margin: 20 auto;">
+        Prędkość dryfu: {{ driftVelocity }}
+      </p>
+    </v-row>
+    <v-row justify="center" style="margin: 20px">
+      <PhysicsModel
+        :temperature="temperature"
+        :carrierConcentration="carrierConcentration"
+        :atomSize="atomSize"
+        :isElectricFieldOn="isElectricFieldOn"
+        @drift-velocity="driftVelocity = $event"
+      />
+  </v-row>
   </v-container>
 </template>
 
 <script>
-import SliderWithField from "@/components/SliderWithField.vue";
+  import SliderWithField from "@/components/SliderWithField.vue";
 
-export default {
-  components: {
-    SliderWithField,
-  },
-
-  data() {
-    return {
-      temperature: 0,
-      carrierConcentration: 1,
-      atomSize: 30,
-      temperatureMin: -273,
-      temperatureMax: 2000,
-      carrierConcentrationMin: 1,
-      carrierConcentrationMax: 100,
-      atomSizeMin: 10,
-      atomSizeMax: 40,
-
-      materials: new Map([
-        ["Aluminium", 426],
-        ["Platyna", 240],
-        ["Kadm", 186],
-        ["Chrom", 610],
-        ["Srebro", 225],
-        ["Miedź", 344.5],
-        ["Złoto", 165],
-        ["Tytan", 420],
-        ["Żelazo", 464],
-        ["Wolfram", 405],
-        ["Nikiel", 440],
-        ["Cynk", 300],
-      ]),
-
-      selectedMaterial: "Aluminium",
-    };
-  },
-
-  computed: {
-    materialNames() {
-      return Array.from(this.materials.keys());
-    },
-    debeyeTemperature() {
-      return this.materials[this.selectedMaterial];
-    },
-  },
-
-  methods: {
-    validateInput(variable, min, max) {
-      if (this[variable] < min) {
-        this[variable] = min;
-      } else if (this[variable] > max) {
-        this[variable] = max;
-      }
+  export default {
+    components: {
+      SliderWithField,
     },
 
-    updateTemperature(selectedMaterial) {
-      const temperature = this.materials.get(selectedMaterial);
-      if (temperature !== undefined) {
-        this.temperature = temperature;
-      }
+    data() {
+      return {
+        driftVelocity: 0,
+        temperature: 0,
+        carrierConcentration: 1,
+        atomSize: 30,
+        temperatureMin: -273,
+        temperatureMax: 2000,
+        carrierConcentrationMin: 1,
+        carrierConcentrationMax: 100,
+        atomSizeMin: 10,
+        atomSizeMax: 40,
+        isElectricFieldOn: true,
+      };
     },
-  },
-};
+
+    computed: {
+      materialNames() {
+        return Array.from(this.materials.keys());
+      },
+      debeyeTemperature() {
+        return this.materials[this.selectedMaterial];
+      },
+    },
+
+    methods: {
+      validateInput(variable, min, max) {
+        if (this[variable] < min) {
+          this[variable] = min;
+        } else if (this[variable] > max) {
+          this[variable] = max;
+        }
+      },
+      toggleElectricField() {
+        this.isElectricFieldOn = !this.isElectricFieldOn;
+        console.log(this.isElectricFieldOn)
+      },
+      updateTemperature(selectedMaterial) {
+        const temperature = this.materials.get(selectedMaterial);
+        if (temperature !== undefined) {
+          this.temperature = temperature;
+        }
+      },
+    },
+  };
 </script>

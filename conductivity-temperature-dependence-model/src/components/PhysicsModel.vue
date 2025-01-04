@@ -21,6 +21,16 @@ export default {
       type: Number,
       required: true,
     },
+
+    isElectricFieldOn: {
+      type: Boolean,
+      required: true,
+    },
+  },
+  data() {
+    return {
+    driftVelocity: 0,
+    };
   },
   name: "PhysicsModel",
   mounted() {
@@ -35,7 +45,7 @@ export default {
       this.dampingFactor = 0.99;
       this.springStiffness = 0.0006;
       // this.carrierMass = 9.11e-31;
-      this.carrierMass = 0.1;
+      this.carrierMass = 1;
 
       this.engine = Matter.Engine.create({ gravity: { y: 0 } });
 
@@ -75,13 +85,14 @@ export default {
     afterUpdateLoop() {
       Matter.Events.on(this.engine, 'afterUpdate', () => {
         this.renderTrail(this.carriers[0]);
+        this.emitDriftVelocity();
       });
     },
 
     renderTrail(carrier) {
       carrier.trail.push({ x: carrier.position.x, y: carrier.position.y });
 
-      if (carrier.trail.length > 50) {
+      if (carrier.trail.length > 300) {
         carrier.trail.shift();
       }
 
@@ -147,7 +158,9 @@ export default {
     },
 
     moveCarrier(carrier) {
-      Matter.Body.applyForce(carrier, carrier.position, { x: this.electricFieldForce, y: 0 });
+      if(this.isElectricFieldOn){
+        Matter.Body.applyForce(carrier, carrier.position, { x: this.electricFieldForce, y: 0 });
+      }
     },
 
     addWalls(){
@@ -311,6 +324,11 @@ export default {
 
     },
     
+    emitDriftVelocity() {
+      this.driftVelocity = Math.sqrt(this.carriers[0].velocity.x ** 2 + this.carriers[0].velocity.y ** 2);
+      this.driftVelocity = Math.round(this.driftVelocity * 100) / 100;
+      this.$emit("drift-velocity", this.driftVelocity);
+    }
   },
   watch: {
     atomSize: {
