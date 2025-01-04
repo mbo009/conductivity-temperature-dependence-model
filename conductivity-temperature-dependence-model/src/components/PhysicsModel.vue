@@ -16,6 +16,11 @@ export default {
       type: Number,
       required: true,
     },
+
+    carrierConcentration: {
+      type: Number,
+      required: true,
+    },
   },
   name: "PhysicsModel",
   mounted() {
@@ -44,7 +49,11 @@ export default {
       this.addWalls();
       this.addElectrodes();
       this.addAtoms();
-      this.beforeUpdateLoop()
+      
+      this.carriers = [];
+      this.addCarriers();
+      this.beforeUpdateLoop();
+      this.checkCollisions();
 
       Matter.Render.run(render);
       let runner = Matter.Runner.create();
@@ -54,7 +63,30 @@ export default {
     beforeUpdateLoop() {
       Matter.Events.on(this.engine, 'beforeUpdate', () => {
         this.moveAtoms();
+        this.moveCarriers();
       });
+    },
+    
+    checkCollisions(){
+      Matter.Events.on(this.engine, 'collisionStart', (event) => {
+        const pairs = event.pairs;
+
+        pairs.forEach(pair => {
+          const bodyA = pair.bodyA;
+          const bodyB = pair.bodyB;
+
+          if (bodyA.label == "cathode" && bodyB.label == "carrier") {
+            console.log(`C: ${bodyA.label} and ${bodyB.label}`);
+            
+            if (bodyA.label === "carrier") {
+              this.resetCarrier(bodyA);
+            } else {
+              this.resetCarrier(bodyB);
+            }
+          }
+        });
+      });
+      
     },
     
     gaussianRandom() {
@@ -80,7 +112,13 @@ export default {
     },
 
     moveCarriers() {
-      //
+      this.carriers.forEach(carrier => {
+        this.moveCarrier(carrier);
+      });
+    },
+
+    moveCarrier(carrier) {
+      Matter.Body.applyForce(carrier, carrier.position, { x: this.electricFieldForce, y: 0 });
     },
 
     addWalls(){
@@ -94,7 +132,7 @@ export default {
 
     addElectrodes() {
       let anode = Matter.Bodies.rectangle(20, 0, 40, 1000, {
-        label: "electrode",
+        label: "anode",
         isStatic: true,
         render: {
           text: "-",
@@ -103,7 +141,7 @@ export default {
       });
 
       let cathode = Matter.Bodies.rectangle(1480, 0, 40, 1000, {
-        label: "electrode",
+        label: "cathode",
         isStatic: true,
         render: {
           fillStyle: "red",
@@ -127,11 +165,12 @@ export default {
             50 + (y * 400) / (rows - 1),
             this.atomSize,
             {
+              label: "atom",
               mass: 1,
               restitution: 0.9,
               friction: 0.01,
               render: {
-                fillStyle: "green",
+                fillStyle: "red",
               },
             }
           );
@@ -153,24 +192,65 @@ export default {
       Matter.Composite.add(this.engine.world, this.constraints);
     },
 
-    updateAtoms() {
+    addCarriers() {
+      let carrierCount = (this.windowHeight * this.windowWidth) * this.carrierConcentration / 37500;
+      for (let i = 0; i < carrierCount; i++) {
+        this.addCarrier();
+      }
+    },
+
+    addCarrier() {
+      let carrier = Matter.Bodies.circle(
+        45,
+        Math.random() * this.windowHeight,
+        5,
+        {
+          label: "carrier",
+          mass: 0.1,
+          restitution: 0.9,
+          friction: 0.01,
+          render: {
+            fillStyle: "blue",
+          },
+        }
+      );
+      this.carriers.push(carrier);
+      Matter.Composite.add(this.engine.world, carrier)
+    },
+
+    resetCarrier(carrier) {
+      Matter.Body.setPosition(carrier, { x: 45, y: Math.random() * this.windowHeight });
+      Matter.Body.setVelocity(carrier, { x: 0, y: 0 });
+    },
+    
+    resetSimulation() {
       Matter.Composite.clear(this.engine.world, this.atoms);
       this.addAtoms();
       this.addElectrodes();
-    },
-  },
+      this.addCarriers();
 
+    },
+    
+  },
   watch: {
     atomSize: {
       immediate: true,
       handler() {
         if (this.engine) {
-          this.updateAtoms();
+          this.resetSimulation();
         }
       },
     },
     temperature: {
       immediate: true,
+    },
+    carrierConcentration: {
+      immediate: true,
+      handler() {
+        if (this.engine) {
+          this.resetSimulation();
+        }
+      } 
     }
   },
 };
