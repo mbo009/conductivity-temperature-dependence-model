@@ -63,8 +63,7 @@ export default {
       this.temperatureFactor = 0.0002;
       this.dampingFactor = 0.99;
       this.springStiffness = 0.0006;
-      // this.carrierMass = 9.11e-31;
-      this.carrierMass = 1;
+      this.carrierMass = 0.00055;
 
       this.engine = Matter.Engine.create({ gravity: { y: 0 } });
 
@@ -196,14 +195,14 @@ export default {
 
     moveCarrier(carrier) {
       if(this.isElectricFieldOn){
-        Matter.Body.applyForce(carrier, carrier.position, { x: this.electricFieldForce / 10000, y: 0 });
+        Matter.Body.applyForce(carrier, carrier.position, { x: this.electricFieldForce / 50000000, y: 0 });
       }
     },
 
     addWalls(){
       const walls = [
-        Matter.Bodies.rectangle(this.windowWidth / 2, - 50 / 2, this.windowWidth, 50, { isStatic: true }),
-        Matter.Bodies.rectangle(this.windowWidth / 2, this.windowHeight + 50 / 2, this.windowWidth, 50, { isStatic: true }),
+        Matter.Bodies.rectangle(this.windowWidth / 2, - 50 / 2, this.windowWidth, 50, { isStatic: true, restitution: 1, friction: 0 }),
+        Matter.Bodies.rectangle(this.windowWidth / 2, this.windowHeight + 50 / 2, this.windowWidth, 50, { isStatic: true, restitution: 1, friction: 0 }),
       ];
     
       Matter.Composite.add(this.engine.world, walls);
@@ -235,7 +234,7 @@ export default {
         label: "atom",
         mass: this.atomMass,
         restitution: 0.9,
-        friction: 0.01,
+        friction: 0,
         inertia: Infinity,
         render: {
           fillStyle: "red",
@@ -281,7 +280,7 @@ export default {
       Matter.Composite.add(this.engine.world, this.constraints);
     },
 
-    updateAtoms(){
+    resizeAtoms(){
       this.atoms.forEach((atom, index) => {
         let newAtom = this.createAtom(atom.position.x, atom.position.y);
         Matter.Body.setVelocity(newAtom, atom.velocity);
@@ -299,24 +298,31 @@ export default {
         Matter.Composite.add(this.engine.world, [newAtom, newConstraint]);
       });
     },
+    
+    changeAtomMass() {
+      this.atoms.forEach(atom => {
+        atom.mass = this.atomMass;
+      });
+    },
 
     addCarriers() {
       let carrierCount = (this.windowHeight * this.windowWidth) * this.carrierConcentration / 37500;
       for (let i = 0; i < carrierCount; i++) {
-        this.createCarrier();
+        this.carriers.push(this.createCarrier());
       }
+      Matter.Composite.add(this.engine.world, this.carriers)
     },
 
     createCarrier() {
       let carrier = Matter.Bodies.circle(
         45,
         Math.random() * this.windowHeight,
-        5,
+        this.carrierSize,
         {
           label: "carrier",
           mass: this.carrierMass,
+          friction: 0,
           restitution: 0.9,
-          friction: 0.01,
           render: {
             fillStyle: "blue",
           },
@@ -326,8 +332,7 @@ export default {
         }
       );
       carrier.trail = [];
-      this.carriers.push(carrier);
-      Matter.Composite.add(this.engine.world, carrier)
+      return carrier;
     },
 
     resetCarrier(carrier) {
@@ -345,9 +350,25 @@ export default {
         this.carriers = this.carriers.slice(this.carriers.length - carrierCount, this.carriers.length);
       } else {
         for (let i = this.carriers.length; i < carrierCount; i++) {
-          this.createCarrier();
+          const carrier = this.createCarrier()
+          this.carriers.push(carrier);
+          Matter.Composite.add(this.engine.world, carrier);
         }
       }
+    },
+
+    resizeCarriers() {
+      this.carriers.forEach((carrier, index) => {
+        let newCarrier = this.createCarrier();
+        Matter.Body.setVelocity(newCarrier, carrier.velocity);
+        Matter.Body.setPosition(newCarrier, carrier.position);
+    
+        Matter.Composite.remove(this.engine.world, carrier);
+
+        this.carriers[index] = newCarrier;
+
+        Matter.Composite.add(this.engine.world, newCarrier);
+      });
     },
 
     carrierCount() {
@@ -373,7 +394,7 @@ export default {
       immediate: true,
       handler() {
         if (this.engine) {
-          this.updateAtoms();
+          this.resizeAtoms();
         }
       },
     },
@@ -394,6 +415,22 @@ export default {
           } else {
             Matter.Composite.remove(this.engine.world, this.mouseConstraint);
           }
+        }
+      },
+    },
+    carrierSize: {
+      immediate: true,
+      handler() {
+        if (this.engine) {
+          this.resizeCarriers();
+        }
+      },
+    },
+    atomMass: {
+      immediate: true,
+      handler() {
+        if (this.engine) {
+          this.changeAtomMass();
         }
       },
     },

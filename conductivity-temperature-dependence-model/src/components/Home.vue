@@ -91,7 +91,7 @@ export default {
       
       carrierConcentration: 1,
       carrierConcentrationMin: 1,
-      carrierConcentrationMax: 100,
+      carrierConcentrationMax: 10,
 
       atomSize: 30,
       atomSizeMin: 10,
@@ -101,11 +101,11 @@ export default {
       atomMassMin: 6, // Lit
       atomMassMax: 190, // Osm
 
-      carrierSize: 1,
+      carrierSize: 5,
       carrierSizeMin: 1,
       carrierSizeMax: 10,
 
-      electricFieldForce: 1,
+      electricFieldForce: 3,
       electricFieldForceMin: 1,
       electricFieldForceMax: 50,
 
