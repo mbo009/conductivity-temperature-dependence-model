@@ -33,6 +33,7 @@ export default {
       this.electricFieldForce = 0.0001;
       this.temperatureFactor = 0.0002;
       this.dampingFactor = 0.99;
+      this.springStiffness = 0.0006;
 
       this.engine = Matter.Engine.create({ gravity: { y: 0 } });
 
@@ -75,14 +76,8 @@ export default {
           const bodyA = pair.bodyA;
           const bodyB = pair.bodyB;
 
-          if (bodyA.label == "cathode" && bodyB.label == "carrier") {
-            console.log(`C: ${bodyA.label} and ${bodyB.label}`);
-            
-            if (bodyA.label === "carrier") {
-              this.resetCarrier(bodyA);
-            } else {
+          if (bodyA.label == "cathode" && bodyB.label == "carrier") {            
               this.resetCarrier(bodyB);
-            }
           }
         });
       });
@@ -151,45 +146,73 @@ export default {
       Matter.Composite.add(this.engine.world, [anode, cathode]);
     },
 
+    createAtom(x, y) {
+      let atom = Matter.Bodies.circle(x, y, this.atomSize, {
+        label: "atom",
+        mass: 1,
+        restitution: 0.9,
+        friction: 0.01,
+        render: {
+          fillStyle: "red",
+        },
+      });
+      atom.ogPosition = { x: atom.position.x, y: atom.position.y };
+      return atom;
+    },
+
+    createConstraint(atom) {
+      return Matter.Constraint.create({
+        bodyA: atom,
+        pointB: { x: atom.ogPosition.x, y: atom.ogPosition.y },
+        stiffness: this.springStiffness,
+        length: 0,
+        render: {
+          visible: false,
+        },
+      });
+    },
+
     addAtoms() {
       this.atoms = [];
       this.constraints = [];
-      const springStiffness = 0.0006;
       const rows = 5;
       const cols = 10;
 
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
-          let atom = Matter.Bodies.circle(
+          let atom = this.createAtom(
             100 + (x * 1300) / (cols - 1),
-            50 + (y * 400) / (rows - 1),
-            this.atomSize,
-            {
-              label: "atom",
-              mass: 1,
-              restitution: 0.9,
-              friction: 0.01,
-              render: {
-                fillStyle: "red",
-              },
-            }
+            50 + (y * 400) / (rows - 1)
           );
-          atom.ogPosition = { x: atom.position.x, y: atom.position.y };
+
           this.atoms.push(atom);
           
-          this.constraints.push(Matter.Constraint.create({
-            bodyA: atom,
-            pointB: { x: atom.position.x, y: atom.position.y },
-            stiffness: springStiffness,
-            render: {
-              visible: false,
-            },
-          }));
+          let constraint = this.createConstraint(atom);
+          this.constraints.push(constraint);
         }
       }
 
       Matter.Composite.add(this.engine.world, this.atoms);
       Matter.Composite.add(this.engine.world, this.constraints);
+    },
+
+    updateAtoms(){
+      this.atoms.forEach((atom, index) => {
+        let newAtom = this.createAtom(atom.position.x, atom.position.y);
+        Matter.Body.setVelocity(newAtom, atom.velocity);
+    
+        Matter.Composite.remove(this.engine.world, atom);
+        Matter.Composite.remove(this.engine.world, this.constraints[index]);
+
+        newAtom.ogPosition = { x: atom.ogPosition.x, y: atom.ogPosition.y };
+
+        let newConstraint = this.createConstraint(newAtom)
+
+        this.atoms[index] = newAtom;
+        this.constraints[index] = newConstraint;
+
+        Matter.Composite.add(this.engine.world, [newAtom, newConstraint]);
+      });
     },
 
     addCarriers() {
@@ -223,6 +246,11 @@ export default {
       Matter.Body.setVelocity(carrier, { x: 0, y: 0 });
     },
     
+    updateCarriers(){
+
+    },
+
+
     resetSimulation() {
       Matter.Composite.clear(this.engine.world, this.atoms);
       this.addAtoms();
@@ -237,12 +265,9 @@ export default {
       immediate: true,
       handler() {
         if (this.engine) {
-          this.resetSimulation();
+          this.updateAtoms();
         }
       },
-    },
-    temperature: {
-      immediate: true,
     },
     carrierConcentration: {
       immediate: true,
