@@ -12,6 +12,21 @@ export default {
       required: true,
     },
 
+    atomMass: {
+      type: Number,
+      required: true,
+    },
+
+    carrierSize: {
+      type: Number,
+      required: true,
+    },
+
+    electricFieldForce: {
+      type: Number,
+      required: true,
+    },
+
     temperature: {
       type: Number,
       required: true,
@@ -23,6 +38,11 @@ export default {
     },
 
     isElectricFieldOn: {
+      type: Boolean,
+      required: true,
+    },
+
+    isInteractive: {
       type: Boolean,
       required: true,
     },
@@ -40,7 +60,6 @@ export default {
     initPhysics() {
       this.windowWidth = 1500;
       this.windowHeight = 500;
-      this.electricFieldForce = 0.0001;
       this.temperatureFactor = 0.0002;
       this.dampingFactor = 0.99;
       this.springStiffness = 0.0006;
@@ -65,6 +84,9 @@ export default {
       
       this.carriers = [];
       this.addCarriers();
+      if (this.isInteractive) {
+        this.addMouseInteraction();
+      }
       this.beforeUpdateLoop();
       this.afterUpdateLoop();
       this.checkCollisions();
@@ -74,6 +96,21 @@ export default {
       Matter.Runner.run(runner, this.engine);
     },
 
+    addMouseInteraction() {
+      this.mouse = Matter.Mouse.create(this.render.canvas);
+      this.mouseConstraint = Matter.MouseConstraint.create(this.engine, {
+        mouse: this.mouse,
+        constraint: {
+          stiffness: 0.2,
+          render: {
+            visible: false,
+          },
+        },
+      });
+
+      Matter.Composite.add(this.engine.world, this.mouseConstraint);
+      this.render.mouse = this.mouse;
+    },
 
     beforeUpdateLoop() {
       Matter.Events.on(this.engine, 'beforeUpdate', () => {
@@ -159,7 +196,7 @@ export default {
 
     moveCarrier(carrier) {
       if(this.isElectricFieldOn){
-        Matter.Body.applyForce(carrier, carrier.position, { x: this.electricFieldForce, y: 0 });
+        Matter.Body.applyForce(carrier, carrier.position, { x: this.electricFieldForce / 10000, y: 0 });
       }
     },
 
@@ -196,9 +233,10 @@ export default {
     createAtom(x, y) {
       let atom = Matter.Bodies.circle(x, y, this.atomSize, {
         label: "atom",
-        mass: 40000 * this.carrierMass,
+        mass: this.atomMass,
         restitution: 0.9,
         friction: 0.01,
+        inertia: Infinity,
         render: {
           fillStyle: "red",
         },
@@ -346,7 +384,19 @@ export default {
           this.updateCarriers();
         }
       } 
-    }
+    },
+    isInteractive: {
+      immediate: true,
+      handler() {
+        if (this.engine) {
+          if (this.isInteractive) {
+            this.addMouseInteraction();
+          } else {
+            Matter.Composite.remove(this.engine.world, this.mouseConstraint);
+          }
+        }
+      },
+    },
   },
 };
 </script>
