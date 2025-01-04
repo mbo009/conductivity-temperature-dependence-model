@@ -107,7 +107,7 @@ export default {
 
       electricFieldForce: 3,
       electricFieldForceMin: 1,
-      electricFieldForceMax: 50,
+      electricFieldForceMax: 10,
 
       isElectricFieldOn: true,
       isInteractive: false,
