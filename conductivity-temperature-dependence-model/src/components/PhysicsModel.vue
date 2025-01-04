@@ -34,10 +34,12 @@ export default {
       this.temperatureFactor = 0.0002;
       this.dampingFactor = 0.99;
       this.springStiffness = 0.0006;
+      // this.carrierMass = 9.11e-31;
+      this.carrierMass = 0.1;
 
       this.engine = Matter.Engine.create({ gravity: { y: 0 } });
 
-      let render = Matter.Render.create({
+      this.render = Matter.Render.create({
         element: this.$refs.physicsModel,
         engine: this.engine,
         options: {
@@ -54,12 +56,14 @@ export default {
       this.carriers = [];
       this.addCarriers();
       this.beforeUpdateLoop();
+      this.afterUpdateLoop();
       this.checkCollisions();
 
-      Matter.Render.run(render);
+      Matter.Render.run(this.render);
       let runner = Matter.Runner.create();
       Matter.Runner.run(runner, this.engine);
     },
+
 
     beforeUpdateLoop() {
       Matter.Events.on(this.engine, 'beforeUpdate', () => {
@@ -68,6 +72,36 @@ export default {
       });
     },
     
+    afterUpdateLoop() {
+      Matter.Events.on(this.engine, 'afterUpdate', () => {
+        this.renderTrail(this.carriers[0]);
+      });
+    },
+
+    renderTrail(carrier) {
+      carrier.trail.push({ x: carrier.position.x, y: carrier.position.y });
+
+      if (carrier.trail.length > 50) {
+        carrier.trail.shift();
+      }
+
+      const canvas = this.render.canvas;
+      const context = canvas.getContext("2d");
+
+      context.beginPath();
+      for (let i = 1; i < carrier.trail.length; i++) {
+        const current = carrier.trail[i];
+        const previous = carrier.trail[i - 1];
+        
+        context.moveTo(previous.x, previous.y);
+        context.lineTo(current.x, current.y);
+      }
+
+      context.strokeStyle = "gray";
+      context.lineWidth = 3;
+      context.stroke();
+    },
+
     checkCollisions(){
       Matter.Events.on(this.engine, 'collisionStart', (event) => {
         const pairs = event.pairs;
@@ -149,7 +183,7 @@ export default {
     createAtom(x, y) {
       let atom = Matter.Bodies.circle(x, y, this.atomSize, {
         label: "atom",
-        mass: 1,
+        mass: 40000 * this.carrierMass,
         restitution: 0.9,
         friction: 0.01,
         render: {
@@ -229,14 +263,18 @@ export default {
         5,
         {
           label: "carrier",
-          mass: 0.1,
+          mass: this.carrierMass,
           restitution: 0.9,
           friction: 0.01,
           render: {
             fillStyle: "blue",
           },
+          collisionFilter: {
+            group: -1,
+          },
         }
       );
+      carrier.trail = [];
       this.carriers.push(carrier);
       Matter.Composite.add(this.engine.world, carrier)
     },
@@ -244,6 +282,7 @@ export default {
     resetCarrier(carrier) {
       Matter.Body.setPosition(carrier, { x: 45, y: Math.random() * this.windowHeight });
       Matter.Body.setVelocity(carrier, { x: 0, y: 0 });
+      carrier.trail = [];
     },
     
     updateCarriers(){
