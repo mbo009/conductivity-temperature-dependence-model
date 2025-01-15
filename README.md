@@ -21,19 +21,19 @@ Aby umożliwić widoczny ruch nośników, wyliczona wartość siły działające
 ### 🧑‍🔬 Użyte wzory
 
 _Siła elektryczna działająca na nośnik:_
-$ F = E \cdot q $
+$` F = E \cdot q `$
 
 _Zasada ruchu nośników pod wpływem siły elektrycznej:_
-$ F = m \cdot a $
+$` F = m \cdot a `$
 
 _Ruch atomów - wychylenie gaussowskie:_
-$ \Delta x = \sigma \cdot \mathcal{N}(0,1) $
+$` \Delta x = \sigma \cdot \mathcal{N}(0,1) `$
 
 _Zmiana prędkości nośnika w wyniku pola elektrycznego:_
-$ v = v_0 + \frac{F \cdot t}{m} $
+$` v = v_0 + \frac{F \cdot t}{m} `$
 
 Atomy przyciągane do pozycji początkowej (analogicznie do prawa Hooke'a):
-$ F = -k \cdot x $
+$` F = -k \cdot x `$
 
 ## 📝 Jak zbudować
 
