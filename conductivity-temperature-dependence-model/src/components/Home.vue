@@ -22,7 +22,7 @@
         label="Rozmiar atomu"
       />
     </v-row>
-    
+
     <v-row justify="space-evenly">
       <SliderWithField
         v-model="carrierConcentration"
@@ -30,7 +30,7 @@
         :max="carrierConcentrationMax"
         label="Koncentracja nośników"
       />
-      
+
       <SliderWithField
         v-model="electricFieldForce"
         :min="electricFieldForceMin"
@@ -46,7 +46,7 @@
       />
     </v-row>
 
-    <v-row justify="center" style="margin: 40px 0 20px 0;">
+    <v-row justify="center" style="margin: 40px 0 20px 0">
       <PhysicsModel
         :temperature="temperature"
         :carrierConcentration="carrierConcentration"
@@ -59,7 +59,7 @@
         @drift-velocity="driftVelocity = $event"
       />
     </v-row>
-    
+
     <v-row align="center" justify="center">
       <p style="width: 250px; margin: 20 auto; font-size: 20px">
         Prędkość dryfu: {{ driftVelocity }}
@@ -67,17 +67,22 @@
     </v-row>
 
     <v-row justify="space-evenly">
-      <v-btn @click="toggleElectricField" :color="isElectricFieldOn ? 'green' : 'red'">
+      <v-btn
+        @click="toggleElectricField"
+        :color="isElectricFieldOn ? 'green' : 'red'"
+      >
         <span>Pole elektryczne</span>
       </v-btn>
 
-      <v-btn @click="toggleInteractiveMode" :color="isInteractive ? 'green' : 'red'">
-        <span>Tryb interaktywny</span >
+      <v-btn
+        @click="toggleInteractiveMode"
+        :color="isInteractive ? 'green' : 'red'"
+      >
+        <span>Tryb interaktywny</span>
       </v-btn>
     </v-row>
   </v-container>
 </template>
-
 
 <script>
 export default {
@@ -88,7 +93,7 @@ export default {
       temperature: 0,
       temperatureMin: -273,
       temperatureMax: 2000,
-      
+
       carrierConcentration: 1,
       carrierConcentrationMin: 1,
       carrierConcentrationMax: 10,
@@ -105,12 +110,13 @@ export default {
       carrierSizeMin: 1,
       carrierSizeMax: 10,
 
-      electricFieldForce: 3,
-      electricFieldForceMin: 1,
-      electricFieldForceMax: 10,
+      electricFieldForce: 5e7,
+      electricFieldForceMin: 1e7,
+      electricFieldForceMax: 1e8,
 
       isElectricFieldOn: true,
       isInteractive: false,
+      isPaused: false,
     };
   },
   methods: {
@@ -119,7 +125,7 @@ export default {
     },
     toggleInteractiveMode() {
       this.isInteractive = !this.isInteractive;
-    }
+    },
   },
 };
 </script>

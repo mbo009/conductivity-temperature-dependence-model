@@ -49,7 +49,7 @@ export default {
   },
   data() {
     return {
-    driftVelocity: 0,
+      driftVelocity: 0,
     };
   },
   name: "PhysicsModel",
@@ -64,6 +64,7 @@ export default {
       this.dampingFactor = 0.99;
       this.springStiffness = 0.0006;
       this.carrierMass = 0.00055;
+      this.carrierCharge = 1.6e-19;
 
       this.engine = Matter.Engine.create({ gravity: { y: 0 } });
 
@@ -76,11 +77,11 @@ export default {
           wireframes: false,
         },
       });
-      
+
       this.addWalls();
       this.addElectrodes();
       this.addAtoms();
-      
+
       this.carriers = [];
       this.addCarriers();
       if (this.isInteractive) {
@@ -112,14 +113,14 @@ export default {
     },
 
     beforeUpdateLoop() {
-      Matter.Events.on(this.engine, 'beforeUpdate', () => {
+      Matter.Events.on(this.engine, "beforeUpdate", () => {
         this.moveAtoms();
         this.moveCarriers();
       });
     },
-    
+
     afterUpdateLoop() {
-      Matter.Events.on(this.engine, 'afterUpdate', () => {
+      Matter.Events.on(this.engine, "afterUpdate", () => {
         this.renderTrail(this.carriers[0]);
         this.emitDriftVelocity();
       });
@@ -139,7 +140,7 @@ export default {
       for (let i = 1; i < carrier.trail.length; i++) {
         const current = carrier.trail[i];
         const previous = carrier.trail[i - 1];
-        
+
         context.moveTo(previous.x, previous.y);
         context.lineTo(current.x, current.y);
       }
@@ -149,22 +150,21 @@ export default {
       context.stroke();
     },
 
-    checkCollisions(){
-      Matter.Events.on(this.engine, 'collisionStart', (event) => {
+    checkCollisions() {
+      Matter.Events.on(this.engine, "collisionStart", (event) => {
         const pairs = event.pairs;
 
-        pairs.forEach(pair => {
+        pairs.forEach((pair) => {
           const bodyA = pair.bodyA;
           const bodyB = pair.bodyB;
 
-          if (bodyA.label == "cathode" && bodyB.label == "carrier") {            
-              this.resetCarrier(bodyB);
+          if (bodyA.label == "cathode" && bodyB.label == "carrier") {
+            this.resetCarrier(bodyB);
           }
         });
       });
-      
     },
-    
+
     gaussianRandom() {
       let rand = 0;
       for (let i = 0; i < 6; i++) {
@@ -172,39 +172,60 @@ export default {
       }
       return (rand / 6) * 2 - 1;
     },
-    
+
     moveAtoms() {
-      this.atoms.forEach(atom => {
-          this.moveAtom(atom);
+      this.atoms.forEach((atom) => {
+        this.moveAtom(atom);
       });
     },
 
     moveAtom(atom) {
-      atom.velocity.x += this.gaussianRandom() * this.temperatureFactor * (this.temperature + 273);
-      atom.velocity.y += this.gaussianRandom() * this.temperatureFactor * (this.temperature + 273);
+      atom.velocity.x +=
+        this.gaussianRandom() *
+        this.temperatureFactor *
+        (this.temperature + 273);
+      atom.velocity.y +=
+        this.gaussianRandom() *
+        this.temperatureFactor *
+        (this.temperature + 273);
       Matter.Body.setVelocity(atom, { x: atom.velocity.x, y: atom.velocity.y });
       atom.velocity.x *= this.dampingFactor;
       atom.velocity.y *= this.dampingFactor;
     },
 
     moveCarriers() {
-      this.carriers.forEach(carrier => {
+      this.carriers.forEach((carrier) => {
         this.moveCarrier(carrier);
       });
     },
 
     moveCarrier(carrier) {
-      if(this.isElectricFieldOn){
-        Matter.Body.applyForce(carrier, carrier.position, { x: this.electricFieldForce / 50000000, y: 0 });
+      if (this.isElectricFieldOn) {
+        Matter.Body.applyForce(carrier, carrier.position, {
+          x: this.electricFieldForce * this.carrierCharge * 10000,
+          y: 0,
+        });
       }
     },
 
-    addWalls(){
+    addWalls() {
       const walls = [
-        Matter.Bodies.rectangle(this.windowWidth / 2, - 50 / 2, this.windowWidth, 50, { isStatic: true, restitution: 1, friction: 0 }),
-        Matter.Bodies.rectangle(this.windowWidth / 2, this.windowHeight + 50 / 2, this.windowWidth, 50, { isStatic: true, restitution: 1, friction: 0 }),
+        Matter.Bodies.rectangle(
+          this.windowWidth / 2,
+          -50 / 2,
+          this.windowWidth,
+          50,
+          { isStatic: true, restitution: 1, friction: 0 }
+        ),
+        Matter.Bodies.rectangle(
+          this.windowWidth / 2,
+          this.windowHeight + 50 / 2,
+          this.windowWidth,
+          50,
+          { isStatic: true, restitution: 1, friction: 0 }
+        ),
       ];
-    
+
       Matter.Composite.add(this.engine.world, walls);
     },
 
@@ -232,7 +253,7 @@ export default {
     createAtom(x, y) {
       let atom = Matter.Bodies.circle(x, y, this.atomSize, {
         label: "atom",
-        mass: this.atomMass,
+        mass: 190,
         restitution: 0.9,
         friction: 0,
         inertia: Infinity,
@@ -270,7 +291,7 @@ export default {
           );
 
           this.atoms.push(atom);
-          
+
           let constraint = this.createConstraint(atom);
           this.constraints.push(constraint);
         }
@@ -280,17 +301,17 @@ export default {
       Matter.Composite.add(this.engine.world, this.constraints);
     },
 
-    resizeAtoms(){
+    resizeAtoms() {
       this.atoms.forEach((atom, index) => {
         let newAtom = this.createAtom(atom.position.x, atom.position.y);
         Matter.Body.setVelocity(newAtom, atom.velocity);
-    
+
         Matter.Composite.remove(this.engine.world, atom);
         Matter.Composite.remove(this.engine.world, this.constraints[index]);
 
         newAtom.ogPosition = { x: atom.ogPosition.x, y: atom.ogPosition.y };
 
-        let newConstraint = this.createConstraint(newAtom)
+        let newConstraint = this.createConstraint(newAtom);
 
         this.atoms[index] = newAtom;
         this.constraints[index] = newConstraint;
@@ -298,19 +319,34 @@ export default {
         Matter.Composite.add(this.engine.world, [newAtom, newConstraint]);
       });
     },
-    
+
     changeAtomMass() {
-      this.atoms.forEach(atom => {
-        atom.mass = this.atomMass;
+      this.atoms.forEach((atom, index) => {
+        let newAtom = this.createAtom(atom.position.x, atom.position.y);
+        Matter.Body.setVelocity(newAtom, atom.velocity);
+
+        Matter.Composite.remove(this.engine.world, atom);
+        Matter.Composite.remove(this.engine.world, this.constraints[index]);
+
+        newAtom.ogPosition = { x: atom.ogPosition.x, y: atom.ogPosition.y };
+
+        let newConstraint = this.createConstraint(newAtom);
+
+        this.atoms[index] = newAtom;
+        this.constraints[index] = newConstraint;
+
+        Matter.Composite.add(this.engine.world, [newAtom, newConstraint]);
       });
     },
 
     addCarriers() {
-      let carrierCount = (this.windowHeight * this.windowWidth) * this.carrierConcentration / 37500;
+      let carrierCount =
+        (this.windowHeight * this.windowWidth * this.carrierConcentration) /
+        37500;
       for (let i = 0; i < carrierCount; i++) {
         this.carriers.push(this.createCarrier());
       }
-      Matter.Composite.add(this.engine.world, this.carriers)
+      Matter.Composite.add(this.engine.world, this.carriers);
     },
 
     createCarrier() {
@@ -336,21 +372,29 @@ export default {
     },
 
     resetCarrier(carrier) {
-      Matter.Body.setPosition(carrier, { x: 45, y: Math.random() * this.windowHeight });
+      Matter.Body.setPosition(carrier, {
+        x: 45,
+        y: Math.random() * this.windowHeight,
+      });
       Matter.Body.setVelocity(carrier, { x: 0, y: 0 });
       carrier.trail = [];
     },
-    
-    updateCarriers(){
+
+    updateCarriers() {
       let carrierCount = this.carrierCount();
       if (this.carriers.length > carrierCount) {
-        this.carriers.slice(0, this.carriers.length - carrierCount).forEach(carrier => {
-          Matter.Composite.remove(this.engine.world, carrier);
-        });
-        this.carriers = this.carriers.slice(this.carriers.length - carrierCount, this.carriers.length);
+        this.carriers
+          .slice(0, this.carriers.length - carrierCount)
+          .forEach((carrier) => {
+            Matter.Composite.remove(this.engine.world, carrier);
+          });
+        this.carriers = this.carriers.slice(
+          this.carriers.length - carrierCount,
+          this.carriers.length
+        );
       } else {
         for (let i = this.carriers.length; i < carrierCount; i++) {
-          const carrier = this.createCarrier()
+          const carrier = this.createCarrier();
           this.carriers.push(carrier);
           Matter.Composite.add(this.engine.world, carrier);
         }
@@ -362,7 +406,7 @@ export default {
         let newCarrier = this.createCarrier();
         Matter.Body.setVelocity(newCarrier, carrier.velocity);
         Matter.Body.setPosition(newCarrier, carrier.position);
-    
+
         Matter.Composite.remove(this.engine.world, carrier);
 
         this.carriers[index] = newCarrier;
@@ -372,22 +416,26 @@ export default {
     },
 
     carrierCount() {
-      return (this.windowHeight * this.windowWidth) * this.carrierConcentration / 37500;
+      return (
+        (this.windowHeight * this.windowWidth * this.carrierConcentration) /
+        37500
+      );
     },
-    
+
     resetSimulation() {
       Matter.Composite.clear(this.engine.world, this.atoms);
       this.addAtoms();
       this.addElectrodes();
       this.addCarriers();
-
     },
-    
+
     emitDriftVelocity() {
-      this.driftVelocity = Math.sqrt(this.carriers[0].velocity.x ** 2 + this.carriers[0].velocity.y ** 2);
+      this.driftVelocity = Math.sqrt(
+        this.carriers[0].velocity.x ** 2 + this.carriers[0].velocity.y ** 2
+      );
       this.driftVelocity = Math.round(this.driftVelocity * 100) / 100;
       this.$emit("drift-velocity", this.driftVelocity);
-    }
+    },
   },
   watch: {
     atomSize: {
@@ -404,7 +452,7 @@ export default {
         if (this.engine) {
           this.updateCarriers();
         }
-      } 
+      },
     },
     isInteractive: {
       immediate: true,
